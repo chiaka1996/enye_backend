@@ -6,11 +6,15 @@ const app = express();
 
 const cors = require('cors');
 
+app.use(cors());
+app.use(express.json());
+
 let exchangeRate;
 
-const getExchangeRate = async () => {
+const getExchangeRate = async (base) => {
+    //console.log(base)
     try{
-    exchangeRate = await axios.get('https://api.exchangeratesapi.io/latest');
+    exchangeRate = await axios.get(`https://api.exchangeratesapi.io/latest?base=${base}`);
     return exchangeRate
     }
     catch(err){
@@ -18,28 +22,27 @@ const getExchangeRate = async () => {
     }
 }
 
-getExchangeRate()
-
-app.use(cors());
-app.use(express.json());
-
-let base;
-let currency;
-let splittedCurrency;
 
 app.get('/api/rates', (req, res) => {
-    
+        
+    let base;
+    let currency;
+    let splittedCurrency;
     base = req.query.base;
     currency = req.query.currency;
     splittedCurrency = currency.split(',');
 
-    if(base !== "EUR" || base === "") {
-         res.status(404).json({
-            error: "the base must be in EURO"
-        })
-    }
+     getExchangeRate(base)
+    console.log(exchangeRate)
 
-    else {
+    if(base === "" || currency==="") {
+        res.status(404).json({
+           error: "the url is incorrect"
+       })
+   }
+
+   else {
+    
         let exchange = exchangeRate.data.rates
         let rateObject = {}
         for (const rate in exchange) {
@@ -47,12 +50,11 @@ app.get('/api/rates', (req, res) => {
                 
                 if(rate === curr ){
                     rateObject[rate] = exchange[rate]
-                    //  console.log(`${rate}: ${exchange[rate]}`);
                 }
             });
 
     }
-    console.log(rateObject)
+
    res.status(200).json({
         "results": {
             "base": exchangeRate.data.base,
